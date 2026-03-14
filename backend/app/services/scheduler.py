@@ -80,6 +80,7 @@ async def analyze_hourly_patterns():
             scores_to_insert.append(
                 RiskScore(
                     feature_id=sensor_id,
+                    
                     s_base=round(safe_score, 4),
                     score=round(safe_score, 4),
                     level=risk_level,  # 이제 ENUM에 있는 단어만 들어갑니다!

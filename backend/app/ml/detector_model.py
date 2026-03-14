@@ -1,205 +1,291 @@
-import json
+import os
+import json  # 🔥 JSON 변환을 위해 추가됨
+import asyncio
 import joblib
-import pandas as pd
 import numpy as np
-from datetime import datetime, timezone, date
-from pathlib import Path
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+import pandas as pd
 
+from datetime import datetime, timedelta
+
+from sqlalchemy import select, update  # 🔥 update 임포트 추가됨
+from sqlalchemy.dialects.mysql import insert
+
+from app.db.database import AsyncSessionLocal
+from app.models.hourly_feature import HourlyFeature
 from app.models.resident_setting import ResidentSetting
+from app.models.resident_baseline import ResidentBaseline
 from app.models.risk_score import RiskScore
-from app.models.daily_feature import DailyFeature  # ✅ feature_id -> target_date 조회용
-from app.ml.train_model import MODEL_DIR  # MODEL_DIR 재사용
+from app.models.alert import Alert
 
-DISEASE_RULES = {"ALD": 5, "DEP": 4, "HTN": 2, "DM": 3, "COPD": 4, "OTHER": 3}
-WEEKDAY_MAP = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
 
-def _parse_config(raw):
-    if raw is None:
-        return {}
-    if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        try:
-            return json.loads(raw)
-        except Exception:
-            return {}
-    return {}
+BASE_DIR = os.path.dirname(__file__)
+MODEL_DIR = os.path.join(BASE_DIR, "saved_models")
 
-def _time_in_range(start_hhmm: str, end_hhmm: str, now_time) -> bool:
-    start = datetime.strptime(start_hhmm, "%H:%M").time()
-    end = datetime.strptime(end_hhmm, "%H:%M").time()
-    if start <= end:
-        return start <= now_time <= end
-    return (now_time >= start) or (now_time <= end)
 
-async def get_resident_weights(resident_id: int, db: AsyncSession):
-    stmt = select(ResidentSetting).where(ResidentSetting.resident_id == resident_id)
-    setting = (await db.execute(stmt)).scalar_one_or_none()
-    if not setting:
-        return 1.0, 1.0, 1.0
+DAY_MAP = {
+    "MON":0,"TUE":1,"WED":2,"THU":3,
+    "FRI":4,"SAT":5,"SUN":6
+}
 
-    config = _parse_config(setting.days_of_week)
 
-    now = datetime.now()
-    current_time = now.time()
-    current_weekday_str = WEEKDAY_MAP[now.weekday()]
+def get_disease_weight(diseases):
+    if not diseases:
+        return 1.0
+    if "DM" in diseases:
+        return 1.15
+    if "HTN" in diseases:
+        return 1.1
+    return 1.0
 
-    d_score = 0
-    for d in config.get("health", {}).get("diseases", []):
-        # diseases가 str로 들어오는 케이스 방어
-        if isinstance(d, dict) and d.get("is_active"):
-            d_score += DISEASE_RULES.get(d.get("code"), 3)
-    alpha_disease = 1 + (d_score * 0.05)
 
-    w_outing = 1.0
-    for o in config.get("routine", {}).get("outings", []):
-        if current_weekday_str not in (o.get("days") or []):
+def is_outing_time(routine, now):
+    if not routine:
+        return False
+    weekday = now.weekday()
+    now_time = now.strftime("%H:%M")
+    for o in routine.get("outings", []):
+        days = [DAY_MAP.get(d, -1) for d in o.get("days", [])]
+        if weekday not in days:
             continue
-        for sch in (o.get("schedule") or []):
-            start = sch.get("start")
-            end = sch.get("end")
-            if not start or not end:
-                continue
-            if _time_in_range(start, end, current_time):
-                w_outing = 0.5
-                break
-        if w_outing != 1.0:
-            break
+        for s in o.get("schedule", []):
+            if s["start"] <= now_time <= s["end"]:
+                return True
+    return False
 
-    s_weight = float(setting.sensitivity_weight) if setting.sensitivity_weight else 1.0
-    return alpha_disease, w_outing, s_weight
 
-def _is_weekend(d: date) -> float:
-    return 1.0 if d.weekday() >= 5 else 0.0
+def decide_level(risk_score):
+    if risk_score >= 0.8:
+        return "emergency"
+    if risk_score >= 0.6:
+        return "alert"
+    if risk_score >= 0.4:
+        return "watch"
+    return "normal"
 
-async def _get_target_date_from_feature_id(feature_id: int, db: AsyncSession) -> date:
-    stmt = select(DailyFeature.target_date).where(DailyFeature.feature_id == feature_id)
-    return (await db.execute(stmt)).scalar_one()
 
-async def detect_resident_risk(
-    resident_id: int,
-    feature_id: int,
-    current_features: dict,
-    db: AsyncSession,
-    target_date: date | None = None,   # ✅ 없으면 feature_id로 조회
-):
-    try:
-        if target_date is None:
-            target_date = await _get_target_date_from_feature_id(feature_id, db)
+def generate_summary(level, outing, has_model):
+    if level == "emergency":
+        if outing:
+            return "외출 시간 활동 이상"
+        if not has_model:
+            return "활동 급감 (Baseline 기반)"
+        return "개인 패턴 대비 활동 급감"
+    if level == "alert":
+        if outing:
+            return "외출 패턴 변화 감지"
+        if not has_model:
+            return "활동 감소 (Baseline 기반)"
+        return "개인 패턴 대비 활동 감소"
+    return "정상 패턴"
 
-        # 1) 파일 로드(통합 1모델)
-        model = joblib.load(MODEL_DIR / f"model_{resident_id}.pkl")
-        scaler = joblib.load(MODEL_DIR / f"scaler_{resident_id}.pkl")
-        meta = json.loads((MODEL_DIR / f"meta_{resident_id}.json").read_text(encoding="utf-8"))
 
-        # 2) x7,x8,x9 생성해서 current_features에 주입
-        x1 = float(current_features.get("x1", 0))
-        x3 = float(current_features.get("x3", 0))
-        x4 = float(current_features.get("x4", 0))
+async def run_batch():
+    async with AsyncSessionLocal() as db:
+        print("\n========== DETECTOR START (PERSONAL MODEL) ==========\n")
+        
+        now = datetime.now()
+        cutoff = now - timedelta(hours=2)
 
-        current_features = dict(current_features)
-        current_features["x7"] = float(x4) / (float(x1) + 1.0)
-        current_features["x8"] = float(x1) / (float(x3) + 1.0)
-        current_features["x9"] = _is_weekend(target_date)
+        stmt = select(HourlyFeature).where(HourlyFeature.target_hour >= cutoff)
+        rows = (await db.execute(stmt)).scalars().all()
 
-        # 3) 전처리 -> raw_score
-        cols = meta.get("feature_cols", ["x1","x2","x3","x4","x5","x6","x7","x8","x9"])
-        df = pd.DataFrame([current_features], columns=cols)
-        df = df.replace([np.inf, -np.inf], np.nan).fillna(0)
+        if not rows:
+            print("no hourly data")
+            return
 
-        pp = meta.get("preprocess", {})
-        clip_cfg = pp.get("clip", {})
-        tf_cfg = pp.get("transform", {})
+        print("Target rows to detect:", len(rows))
+        records = []
 
-        for k, (lo, hi) in clip_cfg.items():
-            if k in df.columns:
-                df[k] = df[k].clip(float(lo), float(hi))
+        for r in rows:
+            resident_id = r.resident_id
 
-        for k, t in tf_cfg.items():
-            if k in df.columns and t == "log1p":
-                df[k] = np.log1p(df[k].astype(float))
+            setting = (await db.execute(
+                select(ResidentSetting).where(ResidentSetting.resident_id == resident_id)
+            )).scalar_one_or_none()
 
-        X_scaled = scaler.transform(df)
-        raw_score = float(model.decision_function(X_scaled)[0])
+            baseline = (await db.execute(
+                select(ResidentBaseline).where(ResidentBaseline.resident_id == resident_id)
+            )).scalar_one_or_none()
 
-        # 4) 가중치 조회
-        alpha, w_out, s_weight = await get_resident_weights(resident_id, db)
+            sensitivity = 1.0
+            alpha = 1.0
+            w_outing = 1.0
+            w_baseline = 1.0
+            outing_now = False
 
-        # 5) rule gate
-        x6 = float(current_features.get("x6", 0))
-        if x6 >= 720:
-            level = "emergency"
-            s_base_val = 100.0
-            s_final_val = min(100.0, s_base_val * float(alpha) * float(w_out))
+            if setting:
+                sensitivity = float(setting.sensitivity_weight or 1.0)
+                if setting.days_of_week:
+                    profile = setting.days_of_week
+                    diseases = profile.get("health", {}).get("diseases", [])
+                    routine = profile.get("routine", {})
+                    
+                    alpha = get_disease_weight(diseases)
+                    outing_now = is_outing_time(routine, now)
+                    
+                    if outing_now and (r.x1_motion_count or 0) < 3:
+                        w_outing = 0.3
 
-            reason_data = {
-                "mode": "rule_gate",
-                "rule_gate": {"rule": "x6>=720", "x6": x6},
-                "alpha_disease": round(float(alpha), 2),
-                "w_outing": round(float(w_out), 2),
-                "sensitivity": round(float(s_weight), 2),
-                "raw_score": round(float(raw_score), 6),
-                "target_date": str(target_date),
-                "x9_is_weekend": float(current_features["x9"]),
+            model_path = os.path.join(MODEL_DIR, f"resident_{resident_id}_model.pkl")
+            scaler_path = os.path.join(MODEL_DIR, f"resident_{resident_id}_scaler.pkl")
+            
+            has_model = os.path.exists(model_path) and os.path.exists(scaler_path)
+            raw_score = 0.0
+
+            # 🔥 [수정 1] 7개의 모든 Feature 값 가져오기
+            x1 = float(r.x1_motion_count or 0)
+            x2 = float(r.x2_door_count or 0)
+            x3 = float(getattr(r, "x3_avg_interval", 0) or 0)
+            x4 = float(getattr(r, "x4_night_motion_count", 0) or 0)
+            x5 = float(getattr(r, "x5_first_motion_min", 0) or 0)
+            x6 = float(getattr(r, "x6_last_motion_min", 0) or 0)
+            
+            hour = r.target_hour.hour
+            is_daytime = 1.0 if 6 <= hour <= 22 else 0.0
+
+            if has_model:
+                try:
+                    model = joblib.load(model_path)
+                    scaler = joblib.load(scaler_path)
+
+                    # 🔥 [수정 2] 학습 모델과 동일하게 7개 변수로 데이터프레임 구성
+                    df = pd.DataFrame([{
+                        "x1_motion_count": x1,
+                        "x2_door_count": x2,
+                        "x3_avg_interval": np.log1p(x3),
+                        "x4_night_motion_count": x4,
+                        "x5_first_motion_min": x5,
+                        "x6_last_motion_min": x6,
+                        "is_daytime": is_daytime
+                    }])
+
+                    X = scaler.transform(df)
+                    raw_score = float(model.decision_function(X)[0])
+
+                except Exception as e:
+                    print("model error:", resident_id, e)
+                    has_model = False
+
+            # 🔥 [수정 3] 3단계 Baseline 보정 및 하이브리드 안전망
+            if baseline and baseline.motion_mean > 0:
+                expected = baseline.motion_mean / 24.0
+                if x1 >= expected * 0.7:
+                    w_baseline = 0.4
+                elif x1 < expected * 0.3:
+                    w_baseline = 1.5
+                elif x1 < expected * 0.7:
+                    w_baseline = 1.2  # 애매한 감소(경고) 구간 추가
+
+            # AI 점수 강제 보정 로직 (Rule-based)
+            if has_model:
+                if w_baseline == 1.5 and raw_score > -0.05:
+                    raw_score = -0.07
+                elif w_baseline == 1.2 and raw_score > -0.05:
+                    raw_score = -0.06
+                elif w_baseline == 0.4 and raw_score < 0:
+                    raw_score = 0.05
+            else:
+                if w_baseline == 1.5:
+                    raw_score = -0.10
+                elif w_baseline == 1.2:
+                    raw_score = -0.06
+                else:
+                    raw_score = 0.05
+
+            anomaly = raw_score * alpha * sensitivity * w_outing * w_baseline
+
+            records.append({
+                "resident_id":resident_id,
+                "feature_id":r.feature_id,
+                "score":anomaly,
+                "raw_score":raw_score,
+                "outing":outing_now,
+                "has_model":has_model
+            })
+
+        scores = [r["score"] for r in records]
+        if not scores:
+            return
+
+        pmin = min(scores)
+        pmax = max(scores)
+
+        for rec in records:            
+            normalized = (rec["score"] - pmin) / (pmax - pmin + 1e-6)
+            risk_score = 1 - normalized
+            level = decide_level(risk_score)
+
+            summary = generate_summary(
+                level,
+                rec["outing"],
+                rec["has_model"]
+            )
+
+            # 🔥 [수정 4] reason_codes를 완벽한 JSON 문자열로 변환 (DB 조회 에러 해결)
+            reason_codes_dict = {
+                "mode": "personal_detector",
+                "summary": summary,
+                "raw_score": rec["raw_score"],
+                "normalized_score": float(risk_score),
+                "outing": rec["outing"],
+                "has_model": rec["has_model"]
             }
+            reason_codes_json = json.dumps(reason_codes_dict, ensure_ascii=False)
 
-            db.add(RiskScore(
-                feature_id=feature_id,
-                s_base=round(float(s_base_val), 6),
-                score=round(float(s_final_val), 6),
+            insert_stmt = insert(RiskScore).values(
+                resident_id=rec["resident_id"],
+                feature_id=rec["feature_id"],
+                s_base=rec["raw_score"],
+                score=float(risk_score),
                 level=level,
-                reason_codes=reason_data,
-                scored_at=datetime.now(timezone.utc),
-            ))
-            await db.commit()
-            return float(s_final_val)
+                reason_codes=reason_codes_json,  # JSON 문자열 삽입!
+                scored_at=now
+            )
 
-        # 6) 분위수 컷
-        p01 = float(meta["score_p01"])
-        p03 = float(meta["score_p03"])
-        p20 = float(meta["score_p20"])
+            upsert = insert_stmt.on_duplicate_key_update(
+                s_base=insert_stmt.inserted.s_base,
+                score=insert_stmt.inserted.score,
+                level=insert_stmt.inserted.level,
+                reason_codes=insert_stmt.inserted.reason_codes,
+                scored_at=insert_stmt.inserted.scored_at
+            )
 
-        if raw_score < p01:
-            level = "emergency"
-        elif raw_score < p03:
-            level = "alert"
-        elif raw_score < p20:
-            level = "watch"
-        else:
-            level = "normal"
+            await db.execute(upsert)
 
-        LEVEL_SCORE = {"normal": 20.0, "watch": 50.0, "alert": 75.0, "emergency": 95.0}
-        s_base_val = float(LEVEL_SCORE[level])
-        s_final_val = min(100.0, s_base_val * float(alpha) * float(w_out))
+            risk_id = (await db.execute(
+                select(RiskScore.risk_id).where(
+                    RiskScore.feature_id == rec["feature_id"]
+                )
+            )).scalar_one()
 
-        # (선택) 민감도 반영을 실제 score에 쓰려면 아래처럼 곱해야 함
-        # s_final_val = min(100.0, s_final_val * float(s_weight))
+            if level in ["alert","emergency"]:
+                exist = (await db.execute(
+                    select(Alert.alert_id).where(Alert.risk_id == risk_id)
+                )).scalar_one_or_none()
 
-        reason_data = {
-            "mode": "quantile_cutoff",
-            "raw_score": round(float(raw_score), 6),
-            "cutoffs": {"p01": round(p01, 6), "p03": round(p03, 6), "p20": round(p20, 6)},
-            "decision": level,
-            "alpha_disease": round(float(alpha), 2),
-            "w_outing": round(float(w_out), 2),
-            "sensitivity": round(float(s_weight), 2),
-            "target_date": str(target_date),
-            "x9_is_weekend": float(current_features["x9"]),
-        }
+                if not exist:
+                    await db.execute(
+                        insert(Alert).values(
+                            resident_id=rec["resident_id"],
+                            risk_id=risk_id,
+                            operators_id=1,
+                            status="open",
+                            summary=summary,
+                            created_at=now
+                        )
+                    )
+                else:
+                    await db.execute(
+                        update(Alert)
+                        .where(Alert.risk_id == risk_id)
+                        .values(summary=summary)
+                    )
 
-        db.add(RiskScore(
-            feature_id=feature_id,
-            s_base=round(float(s_base_val), 6),
-            score=round(float(s_final_val), 6),
-            level=level,
-            reason_codes=reason_data,
-            scored_at=datetime.now(timezone.utc),
-        ))
         await db.commit()
-        return float(s_final_val)
+        print("detector finished")
 
-    except Exception as e:
-        print(f"⚠️ {resident_id}번 위험도 계산 중 에러: {e}")
-        return 0.0
+async def main():
+    await run_batch()
+
+if __name__ == "__main__":
+    asyncio.run(main())

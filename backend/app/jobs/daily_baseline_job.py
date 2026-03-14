@@ -94,6 +94,7 @@ async def upsert_baseline_for_resident(db: AsyncSession, df_row: DailyFeature) -
         db.add(
             RiskScore(
                 feature_id=feature_id,
+                resident_id=resident_id,
                 s_base=round(s_base, 4),
                 score=round(s_base, 4),
                 level=level,

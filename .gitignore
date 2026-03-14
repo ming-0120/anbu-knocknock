@@ -1,49 +1,50 @@
-# Virtual Environment
-venv/
-.venv/
-env/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Build
-build/
-dist/
-*.egg-info/
-
-# Test / coverage
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Environment
+# ========================
+# Env / Python
+# ========================
 .env
-.env.*
+venv/
+__pycache__/
+.venv
 
-# DB
-*.sqlite3
-*.db
-*.sql
-*.dump
-
+# ========================
+# Project specific
+# ========================
+activate_proj.bat
+ERD/
+jupyter_kclass.bat
+# ========================
 # Logs
-*.log
+# ========================
 logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# IDE
-.vscode/
+# ========================
+# Node / Build
+# ========================
+**/node_modules/
+dist/
+dist-ssr/
+*.local
+**/package-lock.json
+
+# ========================
+# Editor directories and files
+# ========================
+.vscode/*
+!.vscode/extensions.json
 .idea/
 .DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Model files
-model_weights/
-
-#model
+# model
 *.pkl
-
-#학습데이터
 *.json
-*.csv

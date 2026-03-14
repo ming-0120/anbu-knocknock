@@ -1,29 +1,56 @@
-from sqlalchemy import Column, Integer, String, DateTime, func, Float
+# app/models/resident.py
+from __future__ import annotations
+
+from sqlalchemy import BigInteger, Column, Date, DateTime, Double, String, Text, func
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 from app.db.database import Base
+
+DISEASE_MAP = {
+    "HTN": "고혈압",
+    "DM": "당뇨병",
+    "CKD": "만성 신장질환",
+    "COPD": "만성 폐질환",
+    "HF": "심부전",
+    "CAD": "관상동맥질환",
+}
 
 class Resident(Base):
     __tablename__ = "residents"
 
-    resident_id = Column(Integer, primary_key=True, autoincrement=True)
+    resident_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    resident_reg_no = Column(String(20), nullable=False)
     
-    # 워크벤치 스키마에 맞춘 컬럼들
-    name = Column(String(50), nullable=False)
-    resident_reg_no = Column(String(14), nullable=False, unique=True, index=True) # 주민번호 (예: 020120-4)
-    phone = Column(String(20), nullable=True, index=True)
-    
-    # 주소 관련 컬럼 세분화
-    address_main = Column(String(255), nullable=True)
-    zip_code = Column(String(10), nullable=True)
-    address_detail = Column(String(255), nullable=True)
-    
-    # 위경도 및 프로필 이미지
-    lat = Column(Float, nullable=True)
-    lon = Column(Float, nullable=True)
-    profile_image_url = Column(String(255), nullable=True)
+    phone = Column(String(20), nullable=True)
 
-    # 생성일
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    
-    # (참고) 이전 코드에 있던 updated_at은 워크벤치 화면에 없어서 뺐습니다.
-    # 만약 DB에도 추가하실 예정이라면 아래 주석을 해제해 주세요.
-    # updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    address_main = Column(String(150), nullable=False)
+    zip_code = Column(String(10), nullable=True)
+    address_detail = Column(String(100), nullable=False)
+
+    created_at = Column(DateTime, server_default=func.now())
+    lat = Column(Double, nullable=False)
+    lon = Column(Double, nullable=False)
+
+    profile_image_url = Column(String(1024), nullable=True)
+    gu = Column(String(30), nullable=False)
+    # 추가 컬럼
+    diseases = Column(String(255), nullable=True)
+    medications = Column(String(255), nullable=True)
+    living_alone_since = Column(Date, nullable=True)
+    note = Column(Text, nullable=True)
+    @hybrid_property
+    def disease_label(self):
+        if not self.diseases:
+            return None
+
+        codes = [c.strip().upper() for c in self.diseases.split(",")]
+
+        names = [
+            DISEASE_MAP.get(code, code)
+            for code in codes
+        ]
+
+        return ", ".join(names)
+    # ✅ 핵심: 문자열로만 참조 (순환 import 방지)
+    guardians = relationship("Guardian", back_populates="resident")

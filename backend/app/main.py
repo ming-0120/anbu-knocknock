@@ -1,39 +1,36 @@
 from fastapi import FastAPI
-from app.api.routes import health, sensor_events, ingest
-from app.db.database import engine
-from sqlalchemy import text
-from app.db.base import Base  # 이 import가 모델 로드를 보장
-import os
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from contextlib import asynccontextmanager
-from app.api.routes.sensor_events import router as sensor_events_router
-import redis.asyncio as redis
-
-Base.metadata.create_all(bind=engine)
-
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_DB = int(os.getenv("REDIS_DB", "0"))
-
+from app.api.router import api_router
+from app.core.config import get_settings
+from app.deps.redis import init_redis
+from app.websocket.router import router as websocket_router
+import app.models
+settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup
-    app.state.redis = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        db=REDIS_DB,
-        decode_responses=True,
-    )
+    r = init_redis(settings.REDIS_HOST, settings.REDIS_PORT, settings.REDIS_DB)
     try:
-        await app.state.redis.ping()
+        await r.ping()
         yield
     finally:
-        # shutdown
-        await app.state.redis.aclose()
+        await r.aclose()
 
+def create_app() -> FastAPI:
+    app = FastAPI(lifespan=lifespan)
+    app.include_router(api_router)
+    app.include_router(websocket_router)
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],   # ✅ OPTIONS 포함
+        allow_headers=["*"],
+    )
+    return app
 
-app = FastAPI(lifespan=lifespan)
-
-app.include_router(health.router)
-app.include_router(sensor_events.router, prefix="/sensor-events")
-app.include_router(ingest.router)
+app = create_app()

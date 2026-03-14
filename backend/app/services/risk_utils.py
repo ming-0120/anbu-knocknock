@@ -59,10 +59,43 @@ def is_on_outing(days_of_week_json: Dict[str, Any], now: datetime) -> Tuple[bool
     return False, ""
 
 
-def disease_alpha(days_of_week_json: Dict[str, Any]) -> float:
-    d_score = 0
-    for d in (days_of_week_json.get("health") or {}).get("diseases") or []:
-        if d.get("is_active"):
-            d_score += DISEASE_RULES.get(d.get("code"), 3)
-    # 점수당 5% 증폭(예시)
-    return 1.0 + (d_score * 0.05)
+def disease_alpha(cfg) -> float:
+    """
+    cfg 예시:
+    {
+      "health": {"diseases": ["DM"]},
+      "routine": {...}
+    }
+
+    - diseases: list[str] 질병 코드 목록
+    - 질병이 여러 개면 가장 큰 가중치를 적용(또는 곱/합 등 정책 선택 가능)
+    """
+    if not isinstance(cfg, dict):
+        return 1.0
+
+    health = cfg.get("health")
+    if not isinstance(health, dict):
+        return 1.0
+
+    diseases = health.get("diseases")
+    if not isinstance(diseases, list):
+        return 1.0
+
+    # 빈 값/문자열 아닌 값 제거
+    disease_codes = [x for x in diseases if isinstance(x, str) and x.strip()]
+    if not disease_codes:
+        return 1.0
+
+    # 정책: 질병 코드별 alpha (예시는 임시값. 너 정책에 맞게 조정)
+    ALPHA_BY_CODE = {
+        "DM": 1.10,   # Diabetes Mellitus
+        "HTN": 1.05,  # Hypertension
+        "CVD": 1.08,
+    }
+
+    # 정책 1) 가장 큰 alpha 하나만 적용 (권장: 과도한 폭증 방지)
+    alpha = 1.0
+    for code in disease_codes:
+        alpha = max(alpha, float(ALPHA_BY_CODE.get(code, 1.0)))
+
+    return alpha

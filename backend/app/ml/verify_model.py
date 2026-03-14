@@ -1,24 +1,144 @@
-import joblib
-import numpy as np
+import argparse
+import asyncio
+import pandas as pd
 
-# 거주자 1번의 모델이 생성되었다고 가정
-model_path = "app/ml/saved_models/model_resident_1.pkl"
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 
-try:
-    model = joblib.load(model_path)
-    
-    # 가상의 상황 2개를 테스트합니다. (시간, 요일, 활동량)
-    # [오후 2시(14), 화요일(1), 활동량 50회]
-    test_normal = [[14, 1, 50]]
-    # [오전 3시(3), 화요일(1), 활동량 100회] -> 새벽에 100회면 이상하겠죠?
-    test_anomaly = [[3, 1, 100]]
+from app.core.config import get_settings
+from app.ml.evaluation_model import (
+    convert_prediction,
+    generate_label,
+    evaluate
+)
 
-    print(f"✅ 정상 예상 데이터 결과: {model.predict(test_normal)} (1이면 정상)")
-    print(f"🚨 이상 예상 데이터 결과: {model.predict(test_anomaly)} (-1이면 비정상)")
-    
-    # 결정 점수 확인 (0보다 크면 정상, 작으면 이상치)
-    print(f"📊 정상 데이터 점수: {model.decision_function(test_normal)}")
-    print(f"📊 이상 데이터 점수: {model.decision_function(test_anomaly)}")
 
-except Exception as e:
-    print(f"❌ 검증 실패: {e}")
+settings = get_settings()
+
+engine = create_async_engine(settings.ASYNC_DATABASE_URL, echo=False)
+
+async_session = sessionmaker(
+    engine,
+    expire_on_commit=False,
+    class_=AsyncSession
+)
+
+
+async def load_hourly_features(resident_id):
+
+    async with async_session() as db:
+
+        result = await db.execute(text("""
+        SELECT
+            feature_id,
+            resident_id,
+            target_hour,
+            x1_motion_count,
+            x2_door_count,
+            x3_avg_interval,
+            x4_night_motion_count
+        FROM hourly_features
+        WHERE resident_id = :resident_id
+        ORDER BY target_hour
+        """), {"resident_id": resident_id})
+
+        rows = result.fetchall()
+
+        df = pd.DataFrame(rows, columns=[
+            "feature_id",
+            "resident_id",
+            "target_hour",
+            "x1_motion_count",
+            "x2_door_count",
+            "x3_avg_interval",
+            "x4_night_motion_count"
+        ])
+
+        return df
+
+
+async def load_risk_scores(resident_id):
+
+    async with async_session() as db:
+
+        result = await db.execute(text("""
+        SELECT
+            r.feature_id,
+            r.level,
+            r.score
+        FROM risk_scores r
+        JOIN hourly_features h
+        ON r.feature_id = h.feature_id
+        WHERE h.resident_id = :resident_id
+        """), {"resident_id": resident_id})
+
+        rows = result.fetchall()
+
+        df = pd.DataFrame(rows, columns=[
+            "feature_id",
+            "level",
+            "score"
+        ])
+
+        return df
+
+
+async def validate(resident_id):
+
+    print("\n===== LOAD HOURLY FEATURES =====")
+
+    df_features = await load_hourly_features(resident_id)
+
+    print("hourly rows:", len(df_features))
+
+    print("\n===== LOAD RISK SCORES =====")
+
+    df_scores = await load_risk_scores(resident_id)
+
+    print("risk rows:", len(df_scores))
+
+    print("\n===== MERGE DATA =====")
+
+    df = df_features.merge(
+        df_scores,
+        on="feature_id",
+        how="left"
+    )
+
+    df["pred"] = df["level"].apply(
+        lambda x: convert_prediction(x) if pd.notna(x) else 0
+    )
+
+    df = generate_label(df)
+
+    result = evaluate(df)
+
+    print("\n===== MODEL EVALUATION =====\n")
+
+    print("TP:", result["TP"])
+    print("FP:", result["FP"])
+    print("FN:", result["FN"])
+
+    print("precision:", round(result["precision"], 4))
+    print("recall:", round(result["recall"], 4))
+    print("F1:", round(result["f1"], 4))
+
+
+def main():
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--resident-id",
+        type=int,
+        required=True
+    )
+
+    args = parser.parse_args()
+
+    asyncio.run(validate(args.resident_id))
+
+
+if __name__ == "__main__":
+    main()

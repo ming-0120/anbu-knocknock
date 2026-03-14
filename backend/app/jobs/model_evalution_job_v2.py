@@ -15,8 +15,8 @@ from app.models.daily_feature import DailyFeature
 MODEL_DIR = Path("app/ml/saved_models")
 
 # ===== 설정 =====
-RESIDENT_ID = 939
-LIMIT_DAYS = 365
+RESIDENT_ID = 5
+LIMIT_DAYS = 30
 
 SYNTH_TOTAL = 200
 SYNTH_RISK_RATIO = 0.20
