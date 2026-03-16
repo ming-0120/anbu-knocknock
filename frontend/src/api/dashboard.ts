@@ -1,7 +1,7 @@
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { API_BASE } from '../config';
 
 export async function postHighRisk(body: any) {
-  const res = await fetch(`${BASE}/api/dashboard/high-risk`, {
+  const res = await fetch(`${API_BASE}/api/dashboard/high-risk`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -11,7 +11,7 @@ export async function postHighRisk(body: any) {
 }
 
 export async function postMapSummary(body: any) {
-  const res = await fetch(`${BASE}/api/dashboard/map-summary`, {
+  const res = await fetch(`${API_BASE}/api/dashboard/map-summary`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -21,7 +21,7 @@ export async function postMapSummary(body: any) {
 }
 
 export async function postGuResidents(body: any) {
-  const res = await fetch(`${BASE}/api/dashboard/gu-residents`, {
+  const res = await fetch(`${API_BASE}/api/dashboard/gu-residents`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

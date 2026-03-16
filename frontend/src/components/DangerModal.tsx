@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
+import { WS_BASE } from '../config';
 // API 호출 함수 (기존과 동일)
 async function getHourlyFeatures(residentId: number) {
   const res = await fetch(`/api/hourly-features/${residentId}`);
@@ -101,7 +101,7 @@ const DangerModal: React.FC<Props> = ({ user, onClose, onAssigned }) => {
 }, [showManagers, user]);
 
 useEffect(() => {
-  const ws = new WebSocket("ws://localhost:8000/ws/operators")
+  const ws = new WebSocket(`${WS_BASE}/ws/operators`)
 
   ws.onmessage = (event) => {
 

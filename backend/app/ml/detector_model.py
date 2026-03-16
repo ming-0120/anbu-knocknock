@@ -1,5 +1,5 @@
 import os
-import json  # 🔥 JSON 변환을 위해 추가됨
+import json
 import asyncio
 import joblib
 import numpy as np
@@ -7,7 +7,7 @@ import pandas as pd
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, update  # 🔥 update 임포트 추가됨
+from sqlalchemy import select, update
 from sqlalchemy.dialects.mysql import insert
 
 from app.db.database import AsyncSessionLocal
@@ -52,13 +52,26 @@ def is_outing_time(routine, now):
                 return True
     return False
 
+# ✨ [수정] 95% 상한선 점근선 보정 함수 추가
+def calculate_asymptotic_score(anomaly_intensity, sensitivity=1.0):
+    """
+    anomaly_intensity: 값이 클수록 위험 (0.05 - 최종 anomaly 점수)
+    k: 감도 조절 상수. 8.0을 기준으로 알람이 잦으면 낮추고, 안 울리면 높이세요.
+    """
+    MAX_CAP = 0.95  # 상한선 95%
+    k = 25.0 * sensitivity 
+    
+    # 지수 함수를 이용해 0.95에 수렴하게 만듦
+    score = MAX_CAP * (1 - np.exp(-k * max(0, anomaly_intensity)))
+    
+    return round(float(score), 4)
 
 def decide_level(risk_score):
-    if risk_score >= 0.8:
+    if risk_score >= 0.75: # 80 -> 75 (Emergency)
         return "emergency"
-    if risk_score >= 0.6:
+    if risk_score >= 0.50: # 60 -> 50 (Alert)
         return "alert"
-    if risk_score >= 0.4:
+    if risk_score >= 0.25: # 40 -> 25 (Watch)
         return "watch"
     return "normal"
 
@@ -81,7 +94,7 @@ def generate_summary(level, outing, has_model):
 
 async def run_batch():
     async with AsyncSessionLocal() as db:
-        print("\n========== DETECTOR START (PERSONAL MODEL) ==========\n")
+        print("\n========== DETECTOR START (95% ASYMPTOTIC MODEL) ==========\n")
         
         now = datetime.now()
         cutoff = now - timedelta(hours=2)
@@ -132,7 +145,6 @@ async def run_batch():
             has_model = os.path.exists(model_path) and os.path.exists(scaler_path)
             raw_score = 0.0
 
-            # 🔥 [수정 1] 7개의 모든 Feature 값 가져오기
             x1 = float(r.x1_motion_count or 0)
             x2 = float(r.x2_door_count or 0)
             x3 = float(getattr(r, "x3_avg_interval", 0) or 0)
@@ -148,7 +160,6 @@ async def run_batch():
                     model = joblib.load(model_path)
                     scaler = joblib.load(scaler_path)
 
-                    # 🔥 [수정 2] 학습 모델과 동일하게 7개 변수로 데이터프레임 구성
                     df = pd.DataFrame([{
                         "x1_motion_count": x1,
                         "x2_door_count": x2,
@@ -166,7 +177,6 @@ async def run_batch():
                     print("model error:", resident_id, e)
                     has_model = False
 
-            # 🔥 [수정 3] 3단계 Baseline 보정 및 하이브리드 안전망
             if baseline and baseline.motion_mean > 0:
                 expected = baseline.motion_mean / 24.0
                 if x1 >= expected * 0.7:
@@ -174,9 +184,8 @@ async def run_batch():
                 elif x1 < expected * 0.3:
                     w_baseline = 1.5
                 elif x1 < expected * 0.7:
-                    w_baseline = 1.2  # 애매한 감소(경고) 구간 추가
+                    w_baseline = 1.2
 
-            # AI 점수 강제 보정 로직 (Rule-based)
             if has_model:
                 if w_baseline == 1.5 and raw_score > -0.05:
                     raw_score = -0.07
@@ -200,32 +209,26 @@ async def run_batch():
                 "score":anomaly,
                 "raw_score":raw_score,
                 "outing":outing_now,
-                "has_model":has_model
+                "has_model":has_model,
+                "sensitivity": sensitivity
             })
 
-        scores = [r["score"] for r in records]
-        if not scores:
-            return
-
-        pmin = min(scores)
-        pmax = max(scores)
-
+        # ✨ [수정] 상대평가(Min-Max) 로직 제거 및 절대평가 점근선 방식 적용
         for rec in records:            
-            normalized = (rec["score"] - pmin) / (pmax - pmin + 1e-6)
-            risk_score = 1 - normalized
+            # 위험 강도 계산: 모델 점수가 낮을수록(임계값 0.05 기준) 위험 강도가 높아짐
+            intensity = 0.05 - rec["score"]
+            
+            # 절대평가 기반 95% 상한선 점수 도출
+            risk_score = calculate_asymptotic_score(intensity, sensitivity=rec["sensitivity"])
+            
             level = decide_level(risk_score)
+            summary = generate_summary(level, rec["outing"], rec["has_model"])
 
-            summary = generate_summary(
-                level,
-                rec["outing"],
-                rec["has_model"]
-            )
-
-            # 🔥 [수정 4] reason_codes를 완벽한 JSON 문자열로 변환 (DB 조회 에러 해결)
             reason_codes_dict = {
-                "mode": "personal_detector",
+                "mode": "personal_asymptotic_detector",
                 "summary": summary,
                 "raw_score": rec["raw_score"],
+                "final_anomaly": rec["score"],
                 "normalized_score": float(risk_score),
                 "outing": rec["outing"],
                 "has_model": rec["has_model"]
@@ -238,7 +241,7 @@ async def run_batch():
                 s_base=rec["raw_score"],
                 score=float(risk_score),
                 level=level,
-                reason_codes=reason_codes_json,  # JSON 문자열 삽입!
+                reason_codes=reason_codes_json,
                 scored_at=now
             )
 
@@ -282,7 +285,7 @@ async def run_batch():
                     )
 
         await db.commit()
-        print("detector finished")
+        print("detector finished (asymptotic score applied)")
 
 async def main():
     await run_batch()

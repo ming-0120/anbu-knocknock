@@ -20,8 +20,8 @@ async def get_high_risk(body: HighRiskReq, db: AsyncSession, redis) -> HighRiskR
     async def loader():
         now = datetime.now(timezone.utc)
         since = now - timedelta(minutes=body.window_minutes)
-    
-        rows = await repo.query_high_risk(db, since, body.limit, body.min_level)
+        effective_min_level = body.min_level or "alert"
+        rows = await repo.query_high_risk(db, since, body.limit, effective_min_level)
     
         for r in rows:
             if isinstance(r.get("reason_codes"), str):

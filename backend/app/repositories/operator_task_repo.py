@@ -10,7 +10,7 @@ from app.models.alert_action import AlertAction
 from app.models.risk_score import RiskScore
 from app.models.daily_feature import DailyFeature
 from app.models.hourly_feature import HourlyFeature
-from app.models.alert import Alert
+from app.models.resident_setting import ResidentSetting # 모델명 확인 필요
 async def create_operator_task(
     db: AsyncSession,
     alert_id:int,
@@ -242,4 +242,15 @@ async def close_alert_and_task(
         task.completed_at = now
 
     await db.flush()
+    # 해당 주민의 설정값 조회
+    setting_stmt = select(ResidentSetting).where(ResidentSetting.resident_id == alert.resident_id)
+    setting = (await db.execute(setting_stmt)).scalar_one_or_none()
+
+    if setting:
+        # 기존 가중치에 0.1 더하기 (점점 더 예민하게 감시)
+        setting.sensitivity_weight = (setting.sensitivity_weight or 1.0) + 0.1
+        print(f"주민 ID {alert.resident_id}의 민감도 가중치가 {setting.sensitivity_weight}로 조정되었습니다.")
+    
+    # ... 기존 상태 업데이트 로직 (status = 'resolved' 등) ...
+    await db.commit()
     return alert, task, close_action

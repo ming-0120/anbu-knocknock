@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-
+import { API_BASE } from '../../config';
 import { useLocation, useNavigate } from "react-router-dom";
 
 import DetailProfileEditModal from "./DetailProfileEditModal";
@@ -137,7 +137,7 @@ type UserDetail = {
 
 
 
-const API_BASE = "http://localhost:8000";
+// const API_BASE = "http://localhost:8000";
 
 
 

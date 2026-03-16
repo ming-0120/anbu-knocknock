@@ -7,7 +7,7 @@ import InfoModal from "../../components/InfoModal";
 import { postGuResidents, postHighRisk, postMapSummary } from "../../api/dashboard";
 import { useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
-
+import { WS_BASE } from '../../config';
 type RiskLevel = "normal" | "watch" | "alert" | "emergency" | "danger";
 
 export default function Dashboard() {
@@ -72,7 +72,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws/dashboard");
+    const ws = new WebSocket(`${WS_BASE}/ws/dashboard`);
 
     ws.onopen = () => {
       console.log("dashboard websocket connected");

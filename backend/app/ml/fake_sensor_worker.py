@@ -155,7 +155,7 @@ async def main():
             last_agg = now
 
         # 💡 테스트를 위해 1시간(3600초) -> 1분(60초) 마다 detector 실행
-        if last_detector is None or (now - last_detector).seconds >= 60:
+        if last_detector is None or (now - last_detector).seconds >= 300:
             await run_detector()
             last_detector = now
 

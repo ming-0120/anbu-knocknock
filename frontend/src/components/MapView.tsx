@@ -182,7 +182,7 @@ const MapView = ({ onGuClick, mapData = [] }: Props) => {
           {'high_risk_count' in hoveredGu ? (
             <>
               <p style={{ margin: "0 0 4px 0", fontSize: "14px", color: "#4b5563" }}>
-                고위험군: <strong style={{ color: `rgb(${COLORS.riskHighRGB})`, fontSize: "15px" }}>{hoveredGu.high_risk_count}</strong>명
+                관리 대상: <strong style={{ color: `rgb(${COLORS.riskHighRGB})`, fontSize: "15px" }}>{hoveredGu.high_risk_count}</strong>명
               </p>
               {/* <p style={{ margin: "0", fontSize: "14px", color: "#4b5563" }}>
                 최대 위험도: <strong>{Number(hoveredGu.max_risk_score).toFixed(4)}</strong>

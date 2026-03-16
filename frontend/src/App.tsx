@@ -11,7 +11,7 @@ import MobileApp from "./pages/worker/MobileApp";
 import MobileDetail from "./pages/worker/MobileDetail";
 import Dashboard from "./pages/admin/Dashboard";
 import OperatorLogin from "./pages/worker/OperatorLogin"; 
-
+import { API_BASE } from './config';
 // 기존 App의 모든 기능을 담은 메인 화면 부품<
 const MainLayout = () => {
   const rightUsers = useMemo(() => {
@@ -47,7 +47,7 @@ const MainLayout = () => {
   if (!residentId) return;
 
   try {
-    const res = await fetch(`http://localhost:8000/api/dashboard/residents/${residentId}`);
+    const res = await fetch(`${API_BASE}/api/dashboard/residents/${residentId}`);    
     if (!res.ok) {
       console.error("detail api failed", res.status);
       return;

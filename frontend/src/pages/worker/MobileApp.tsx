@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { WS_BASE } from '../../config';
 type Task = { task_id: number; resident_id: number; alert_id: number; operator_id: number; name: string; gu: string; address_main: string; phone: string; guardian_phone: string; lat: number; lon: number; risk_score: number; last_activity: string; status: string; profile_image_url?: string; reason_codes?: any; summary?: string; };
 
 const MobileApp = () => {
@@ -52,7 +52,7 @@ const MobileApp = () => {
 
   useEffect(() => {
     if (!operatorId) return;
-    const ws = new WebSocket(`ws://localhost:8000/ws/worker/${operatorId}`);
+    const ws = new WebSocket(`${WS_BASE}/ws/worker/${operatorId}`);
     ws.onopen = () => console.log("worker socket connected");
     ws.onmessage = (event) => {
       try {
