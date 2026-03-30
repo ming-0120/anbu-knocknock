@@ -1,0 +1,53 @@
+# ========================
+# Env / Python
+# ========================
+.env
+backend/venv/
+venv/
+__pycache__/
+.venv
+# 파이썬 캐시
+**/__pycache__/
+*.py[cod]
+# ========================
+# Project specific
+# ========================
+activate_proj.bat
+ERD/
+jupyter_kclass.bat
+# ========================
+# Logs
+# ========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ========================
+# Node / Build
+# ========================
+**/node_modules/
+dist/
+dist-ssr/
+*.local
+**/package-lock.json
+
+# ========================
+# Editor directories and files
+# ========================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# model
+*.pkl
+*.json

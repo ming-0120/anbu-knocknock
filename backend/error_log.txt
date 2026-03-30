@@ -1,0 +1,100 @@
+Traceback (most recent call last):
+  File "C:\Users\sarah\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sarah\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\app\ml\detector_model.py", line 351, in main
+    await run_batch()
+  File "D:\anbu_knock\anbu-knocknock\backend\app\ml\detector_model.py", line 281, in run_batch
+    feature_id = (await db.execute(stmt)).scalar()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2366, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 228, in execute
+    return self.await_(self._execute_async(operation, parameters))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 251, in _execute_async
+    result = await self._cursor.execute(operation, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\aiomysql\cursors.py", line 239, in execute
+    await self._query(query)
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\aiomysql\cursors.py", line 457, in _query
+    await conn.query(q)
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\aiomysql\connection.py", line 469, in query
+    await self._read_query_result(unbuffered=unbuffered)
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\aiomysql\connection.py", line 683, in _read_query_result
+    await result.read()
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\aiomysql\connection.py", line 1164, in read
+    first_packet = await self.connection._read_packet()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\aiomysql\connection.py", line 609, in _read_packet
+    packet_header = await self._read_bytes(4)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\anbu_knock\anbu-knocknock\backend\venv\Lib\site-packages\aiomysql\connection.py", line 657, in _read_bytes
+    data = await self._reader.readexactly(num_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sarah\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 752, in readexactly
+    await self._wait_for_data('readexactly')
+  File "C:\Users\sarah\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 545, in _wait_for_data
+    await self._waiter
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:\anbu_knock\anbu-knocknock\backend\app\ml\detector_model.py", line 355, in <module>
+    asyncio.run(main())
+  File "C:\Users\sarah\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\sarah\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt
+
+========== DETECTOR START ==========
+hourly rows: 10000
+residents: 5000
+^C
