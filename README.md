@@ -27,7 +27,7 @@
 - **Frontend:** React (Tailwind CSS, Recharts 활용)
 - **Database:** MySQL
 - **AI/ML:** **Scikit-learn (Isolation Forest)**, Pandas (데이터 전처리)
-- **Infra:**  **Azure**, **Azure**
+- **Infra:**  **Microsoft Azure**, Docker
 ---
 
 # **💡 주요 기능 및 담당 역할**
