@@ -1,4 +1,4 @@
-[anbu-knockknock_planguide.pptx](https://github.com/user-attachments/files/26652419/anbu-knockknock_planguide.pptx)## 👵 안부 똑똑 (Care-Guard System)
+## 👵 안부 똑똑 (Care-Guard System)
 <img width="480" height="262" alt="image" src="https://github.com/user-attachments/assets/34f2997d-8d27-4c96-b2cb-4931ba1dcf06" />
 ---
 
@@ -42,17 +42,6 @@
 
 ---
 
-## **🔧** 기술 스택 (Tech Stack)
-
-- **Hardware:** ESP32 DevKit V1, HC-SR501(PIR), MC-38(문 열림 센서)
-- **Language:** C++ (Arduino IDE), Python 3.10+
-- **Backend:** **FastAPI** (AI 라이브러리 연동 및 비동기 처리 최적화)
-- **Frontend:** React (Tailwind CSS, Recharts 활용)
-- **Database:** MySQL
-- **AI/ML:** **Scikit-learn (Isolation Forest)**, Pandas (데이터 전처리)
-- **Infra:**  **Microsoft Azure**, Docker
----
-
 # **💡 주요 기능 및 담당 역할**
 
 ## **📌 주요 기능**
@@ -76,17 +65,6 @@
 - 대시보드용 API 및 고위험 사용자 조회 로직 개발
 - 모델 평가(Precision, Recall, F1) 및 Threshold 튜닝을 통한 성능 개선
 - 서버 운영 중 발생한 데이터 오류 및 성능 이슈 분석 및 해결
-
-## 📢 시스템 아키텍처 및 프로젝트 구조
-
-## **🏗️ 아키텍처 특징**
-
-- 센서 → 서버 → AI 모델 → 대시보드로 이어지는 **End-to-End 데이터 파이프라인 구조**
-- ESP32 기반 센서에서 수집된 데이터를 실시간으로 FastAPI 서버로 전송하는 **경량 IoT 구조**
-- Isolation Forest 기반 개인별 모델을 적용한 **Per-Resident 이상 탐지 구조**
-- Redis 및 배치 처리를 활용한 **실시간 처리 + 주기적 분석 혼합 구조**
-- React 대시보드를 통한 위험도 시각화 및 운영자 대응을 지원하는 **모니터링 중심 아키텍처**
----
 
 # 🛠️ 문제 해결 및 트러블슈팅 경험
 
