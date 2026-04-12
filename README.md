@@ -1,13 +1,15 @@
-## 👵 안부 똑똑 (Care-Guard System)
+[anbu-knockknock_planguide.pptx](https://github.com/user-attachments/files/26652419/anbu-knockknock_planguide.pptx)## 👵 안부 똑똑 (Care-Guard System)
 <img width="480" height="262" alt="image" src="https://github.com/user-attachments/assets/34f2997d-8d27-4c96-b2cb-4931ba1dcf06" />
 ---
 
 ## **기획 스토리보드**
-[안부똑똑_기획_스토리보드.pptx](https://github.com/user-attachments/files/26652199/_._.pptx)
+[안부똑똑_기획서.pptx](https://github.com/user-attachments/files/26652404/anbu-knockknock_planguide.pptx)
 
 ---
 ### **안부똑똑 발표 영상**
 [![안부똑똑_발표영상](http://img.youtube.com/vi/P70DXkj3qCc/0.jpg)](https://youtu.be/596cN8_jkiM?si=9c_wA1_xwOUGBqoo)
+
+### **안부똑똑 화면 자료**
 <table align="center">
   <tr>
     <td align="center">
