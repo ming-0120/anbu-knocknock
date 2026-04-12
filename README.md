@@ -1,8 +1,29 @@
 ## 👵 안부 똑똑 (Care-Guard System)
 <img width="480" height="262" alt="image" src="https://github.com/user-attachments/assets/34f2997d-8d27-4c96-b2cb-4931ba1dcf06" />
+---
+
+## **기획 스토리보드**
+[안부똑똑_기획_스토리보드.pptx](https://github.com/user-attachments/files/26652199/_._.pptx)
 
 ---
-# 📋 프로젝트 개요
+### **안부똑똑 발표 영상**
+[![안부똑똑_발표영상](http://img.youtube.com/vi/P70DXkj3qCc/0.jpg)](https://youtu.be/596cN8_jkiM?si=9c_wA1_xwOUGBqoo)
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/321829ca-37bd-4133-a6d4-4c020fc7a26a" width="300"/><br/>
+    </td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/20fc977e-ea3f-4071-bd7e-5494b69f4f49" width="300"/><br/>      
+    </td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/0d5ffced-e13a-4c7c-9d07-65145e11a3ef" width="300"/><br/>
+    </td>
+  </tr>
+</table>
+
+---
+# 프로젝트 개요
 
 - **프로젝트명:** 안부똑똑 (Anbu-Knock Knock) - 센서 데이터 기반의 고독사 방지 시스템
 - **개발 기간**: 2026.02.19 ~ 2026.03.25
@@ -63,20 +84,6 @@
 - Isolation Forest 기반 개인별 모델을 적용한 **Per-Resident 이상 탐지 구조**
 - Redis 및 배치 처리를 활용한 **실시간 처리 + 주기적 분석 혼합 구조**
 - React 대시보드를 통한 위험도 시각화 및 운영자 대응을 지원하는 **모니터링 중심 아키텍처**
-
-### 📂 프로젝트 구조
-
-```
-care-guard-system/
-├── hardware/           # [C++] ESP32 센서 제어 및 WiFi 데이터 전송
-├── backend/            # [Python] FastAPI 서버, DB, AI 모델
-│   ├── app/
-│   │   ├── ml/         # Isolation Forest 기반 이상 탐지 로직
-│   │   └── main.py     # API 엔드포인트 (Data 수집 및 결과 반환)
-├── frontend/           # [React] 실시간 상태 대시보드 및 시각화
-└── docs/               # 회로도 및 기획서 관리
-```
-
 ---
 
 # 🛠️ 문제 해결 및 트러블슈팅 경험
@@ -176,24 +183,5 @@ df["x3_avg_interval"]=np.log1p(df["x3_avg_interval"])
 - 모델 학습 안정성 및 이상 탐지 정확도 향상
 
 ---
-
-# **🤔 회고**
-
-- 이상 탐지는 모델보다 **데이터와 기준(Threshold 설계)이 더 중요함**을 체감
-- 동일 모델이라도 평가 기준에 따라 성능이 크게 달라질 수 있음을 경험
-- 실시간 서비스에서는 모델뿐 아니라 **데이터 처리 구조(캐싱, 배치, 흐름 설계)**가 핵심이라는 것을 이해
-- 센서 데이터 특성상 노이즈와 결측이 많아 **Feature 설계의 중요성**을 깊이 느낀 경험
-- 다음 단계로는 **모델 고도화(딥러닝), 개인화 기준 자동화, 시스템 확장성 개선**을 적용해보고 싶음
-
----
-
-## **🤳 화면**
----
-### **안부똑똑 발표 영상**
-[![안부똑똑_발표영상](http://img.youtube.com/vi/P70DXkj3qCc/0.jpg)](https://youtu.be/596cN8_jkiM?si=9c_wA1_xwOUGBqoo)
-
-<img width="1676" height="967" alt="스크린샷 2026-03-28 오후 3 31 20" src="https://github.com/user-attachments/assets/321829ca-37bd-4133-a6d4-4c020fc7a26a" />
-<img width="1575" height="847" alt="스크린샷 2026-03-28 오후 3 37 49" src="https://github.com/user-attachments/assets/20fc977e-ea3f-4071-bd7e-5494b69f4f49" />
-<img width="479" height="854" alt="스크린샷 2026-03-28 오후 3 40 17" src="https://github.com/user-attachments/assets/0d5ffced-e13a-4c7c-9d07-65145e11a3ef" />
 
 
