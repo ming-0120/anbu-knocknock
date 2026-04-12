@@ -7,7 +7,7 @@
 
 ### **시스템 흐름도**
 
-<img width="5000" height="234" alt="mermaid-diagram (1)" src="https://github.com/user-attachments/assets/03a7e119-43de-4de5-b44b-9f65fe8ac2b9" />
+<img width="1734" height="130" alt="image" src="https://github.com/user-attachments/assets/a2af363a-6bf7-43e8-8ba4-aa98e1e170db" />
 
 ---
 ### **안부똑똑 발표 영상**
