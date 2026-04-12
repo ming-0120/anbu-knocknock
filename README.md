@@ -5,6 +5,10 @@
 ## **기획 스토리보드**
 [안부똑똑_기획서.pptx](https://github.com/user-attachments/files/26652404/anbu-knockknock_planguide.pptx)
 
+### **시스템 흐름도**
+
+<img width="5000" height="234" alt="mermaid-diagram (1)" src="https://github.com/user-attachments/assets/03a7e119-43de-4de5-b44b-9f65fe8ac2b9" />
+
 ---
 ### **안부똑똑 발표 영상**
 [![안부똑똑_발표영상](http://img.youtube.com/vi/P70DXkj3qCc/0.jpg)](https://youtu.be/596cN8_jkiM?si=9c_wA1_xwOUGBqoo)
@@ -29,7 +33,8 @@
 
 - **프로젝트명:** 안부똑똑 (Anbu-Knock Knock) - 센서 데이터 기반의 고독사 방지 시스템
 - **개발 기간**: 2026.02.19 ~ 2026.03.25
-- **목표:** 저비용 센서와 AI 알고리즘을 활용해 개인별 '생활 패턴의 변화'를 감지하는 맞춤형 돌봄 시스템 구축과 사회적 문제 중 하나인 고독사를 해결. →  문제 인식 → 차별화/방법 모색 이런 과정
+- **목표:** 저비용 센서와 AI 알고리즘을 활용해 개인의 일상 생활 패턴 변화를 감지하고, 이를 기반으로 맞춤형 돌봄 서비스를 제공하는 시스템을 구축한다.
+나아가, 고독사라는 사회적 문제를 해결하기 위한 실질적인 대응 방안을 제시하는 것을 목표로 한다.
 
 ## **💼 서비스 기획 배경**
 
